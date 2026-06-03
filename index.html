@@ -1,0 +1,1724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pico W Newton's Third Law Experiment Platform</title>
+    <script src="static/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background-color: #f8f9fa; 
+            color: #212529; 
+            font-family: 'Arial', 'Helvetica', sans-serif; 
+            padding-bottom: 60px;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+            padding: 20px 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            position: relative;
+            z-index: 10;
+            border-bottom: 1px solid #ced4da;
+        }
+
+        h1 { 
+            color: #0066cc; 
+            font-size: clamp(1.5rem, 4.5vw, 1.9rem); 
+            text-align: center; 
+            margin: 0; 
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            text-shadow: none;
+        }
+
+        .subtitle {
+            color: #495057;
+            font-size: 0.9rem;
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .status-bar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            background-color: rgba(255, 255, 255, 0.9);
+            border: 1px solid #dee2e6;
+            min-width: 80px;
+            justify-content: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .ws-status.connected .status-dot { 
+            background-color: #28a745;
+            box-shadow: 0 0 4px rgba(40, 167, 69, 0.5);
+        }
+        .ws-status.connecting .status-dot { 
+            background-color: #ffc107;
+            box-shadow: 0 0 4px rgba(255, 193, 7, 0.5);
+            animation: pulse 1.5s infinite;
+        }
+        .ws-status.disconnected .status-dot { 
+            background-color: #dc3545;
+            box-shadow: 0 0 4px rgba(220, 53, 69, 0.5);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            max-width: 700px;
+        }
+
+        .main-button {
+            background: linear-gradient(145deg, #0066cc, #0052a3);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 90px;
+            max-width: 130px;
+            touch-action: manipulation;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(0, 102, 204, 0.2);
+        }
+
+        .main-button:hover { 
+            background: linear-gradient(145deg, #0056b3, #004489);
+            transform: translateY(-1px);
+            box-shadow: 0 3px 6px rgba(0, 102, 204, 0.25);
+        }
+        
+        .main-button:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 3px rgba(0, 102, 204, 0.2);
+        }
+        
+        .main-button.high-frequency { 
+            background: linear-gradient(145deg, #dc3545, #c82333);
+            box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);
+        }
+        .main-button.high-frequency:hover { 
+            background: linear-gradient(145deg, #c82333, #b21f2d);
+            box-shadow: 0 3px 6px rgba(220, 53, 69, 0.25);
+        }
+        
+        .main-button.calibrate-zero { 
+            background: linear-gradient(145deg, #6610f2, #5a0cdc);
+            box-shadow: 0 2px 4px rgba(102, 16, 242, 0.2);
+        }
+        .main-button.calibrate-zero:hover { 
+            background: linear-gradient(145deg, #5a0cdc, #4d0bc0);
+            box-shadow: 0 3px 6px rgba(102, 16, 242, 0.25);
+        }
+        
+        .main-button.memory { 
+            background: linear-gradient(145deg, #17a2b8, #138496);
+            box-shadow: 0 2px 4px rgba(23, 162, 184, 0.2);
+        }
+        .main-button.memory:hover { 
+            background: linear-gradient(145deg, #138496, #117a8b);
+            box-shadow: 0 3px 6px rgba(23, 162, 184, 0.25);
+        }
+
+        .sensor-values {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin: 25px auto;
+            max-width: 1000px;
+            padding: 0 15px;
+        }
+
+        .current-value {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            flex: 1;
+            min-width: 250px;
+            max-width: 400px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            border: 1px solid #dee2e6;
+            transition: transform 0.3s ease;
+        }
+
+        .current-value:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .current-value-label {
+            font-size: 0.9rem;
+            color: #495057;
+            margin-bottom: 8px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+        }
+
+        .current-value-display {
+            font-size: clamp(2rem, 9vw, 2.8rem);
+            font-weight: 700;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .force1-value-display {
+            color: #0066cc; /* Blue - Action Force */
+        }
+
+        .force2-value-display {
+            color: #dc3545; /* Red - Reaction Force */
+        }
+
+        .force-diff-display {
+            color: #ffc107; /* Yellow - Force Difference */
+            font-size: 1.5rem;
+            margin: 10px 0;
+        }
+
+        .zero-status {
+            font-size: 0.85rem;
+            color: #28a745;
+            margin-top: 8px;
+            font-weight: 500;
+        }
+
+        .time-display {
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin-top: 5px;
+            font-weight: 500;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Symmetry Error Display */
+        .symmetry-status {
+            font-size: 0.85rem;
+            color: #ffc107;
+            margin-top: 10px;
+            font-weight: 600;
+            background: rgba(255, 193, 7, 0.1);
+            padding: 5px 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 193, 7, 0.2);
+        }
+
+        .symmetry-good {
+            color: #28a745;
+            background: rgba(40, 167, 69, 0.1);
+            border-color: rgba(40, 167, 69, 0.2);
+        }
+
+        .symmetry-fair {
+            color: #fd7e14;
+            background: rgba(253, 126, 20, 0.1);
+            border-color: rgba(253, 126, 20, 0.2);
+        }
+
+        .symmetry-poor {
+            color: #dc3545;
+            background: rgba(220, 53, 69, 0.1);
+            border-color: rgba(220, 53, 69, 0.2);
+        }
+
+        .chart-container {
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto 30px;
+            padding: 0 15px;
+        }
+
+        .chart-export-controls {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 15px;
+            gap: 10px;
+        }
+
+        .chart-control-button {
+            background: white;
+            color: #495057;
+            border: 1px solid #ced4da;
+            padding: 6px 12px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .chart-control-button:hover {
+            background: #0066cc;
+            color: white;
+            border-color: #0066cc;
+        }
+
+        .charts-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .chart-wrapper {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            border: 1px solid #dee2e6;
+            transition: transform 0.3s ease;
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .chart-wrapper:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-title {
+            font-size: 1.1rem;
+            color: #212529;
+            margin-bottom: 15px;
+            padding-left: 5px;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e9ecef;
+            padding-bottom: 10px;
+        }
+
+        .force-chart {
+            height: 45vh;
+            min-height: 320px;
+        }
+
+        .diff-chart {
+            height: 45vh;
+            min-height: 320px;
+        }
+
+        footer {
+            background: #f8f9fa;
+            color: #495057;
+            padding: 15px;
+            text-align: center;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            font-size: 0.85rem;
+            border-top: 1px solid #dee2e6;
+            z-index: 10;
+        }
+
+        footer h3 {
+            color: #0066cc;
+            font-size: 0.95rem;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        footer p {
+            color: #6c757d;
+            font-size: 0.8rem;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.4;
+        }
+
+        /* Data summary for scientific reporting */
+        .data-summary {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 1000px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            border: 1px solid #dee2e6;
+        }
+
+        .summary-title {
+            font-size: 1.1rem;
+            color: #212529;
+            margin-bottom: 15px;
+            font-weight: 700;
+            border-bottom: 1px solid #e9ecef;
+            padding-bottom: 10px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .summary-item {
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #0066cc;
+        }
+
+        .summary-label {
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+
+        .summary-value {
+            font-size: 1.1rem;
+            color: #212529;
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+        }
+
+        @media (max-width: 768px) {
+            .main-button { 
+                padding: 7px 12px; 
+                font-size: 0.8rem; 
+                min-width: 85px;
+            }
+            .force-chart, .diff-chart { 
+                height: 40vh; 
+                min-height: 280px;
+            }
+            .status-item { 
+                font-size: 0.75rem; 
+                padding: 5px 10px; 
+                min-width: 75px;
+            }
+            .current-value { 
+                min-width: 220px; 
+                padding: 15px;
+            }
+            .chart-wrapper {
+                padding: 15px;
+                min-width: 100%;
+            }
+            .charts-row {
+                flex-direction: column;
+            }
+            .chart-title {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            .chart-export-controls {
+                width: 100%;
+                justify-content: flex-start;
+                flex-wrap: wrap;
+            }
+            .summary-grid {
+                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            }
+        }
+
+        @media (max-width: 480px) {
+            .button-group {
+                gap: 5px;
+            }
+            .main-button {
+                min-width: 75px;
+                font-size: 0.75rem;
+                padding: 6px 10px;
+            }
+            .force-chart, .diff-chart {
+                height: 35vh;
+                min-height: 250px;
+            }
+            .chart-export-controls {
+                gap: 5px;
+            }
+            .chart-control-button {
+                padding: 5px 10px;
+                font-size: 0.75rem;
+            }
+            .sensor-values {
+                gap: 12px;
+                padding: 0 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1 id="mainTitle">Pico W Newton's Third Law Experiment Platform</h1>
+        <div class="subtitle">Dual HX711 Force Sensor System for Quantitative Physics Education</div>
+        
+        <div class="status-bar">
+            <div class="status-item ws-status connecting" id="wsStatus">
+                <span class="status-dot"></span>
+                <span id="wsStatusText">Connecting...</span>
+            </div>
+            <div class="status-item">
+                <span>Sample Rate:</span>
+                <span id="sampleRate">-- Hz</span>
+            </div>
+            <div class="status-item">
+                <span>Data Points:</span>
+                <span id="dataPoints">0</span>
+            </div>
+            <div class="status-item">
+                <span>Force Difference:</span>
+                <span id="forceDiff">-- N</span>
+            </div>
+        </div>
+        
+        <div class="button-group">
+            <button class="main-button calibrate-zero" onclick="calibrateAndZero()">Dual Sensor Zero</button>
+            <button class="main-button high-frequency" onclick="sendCommand('Flag2')">Start Measurement</button>
+            <button class="main-button" onclick="sendCommand('Flag3')">Stop Measurement</button>
+            <button class="main-button memory" onclick="sendCommand('gc')">Memory Recycle</button>
+        </div>
+    </header>
+
+    <div class="sensor-values">
+        <!-- Sensor 1: Action Force -->
+        <div class="current-value">
+            <div class="current-value-label">Action Force F₁ (N)</div>
+            <div class="current-value-display force1-value-display" id="force1Value">0.000</div>
+            <div class="zero-status" id="force1Status">Calibrated</div>
+            <div class="symmetry-status symmetry-good" id="force1Symmetry">Action Force Direction (+)</div>
+            <div class="time-display" id="force1Time">Sample: 0</div>
+        </div>
+        
+        <!-- Sensor 2: Reaction Force -->
+        <div class="current-value">
+            <div class="current-value-label">Reaction Force F₂ (N)</div>
+            <div class="current-value-display force2-value-display" id="force2Value">0.000</div>
+            <div class="zero-status" id="force2Status">Calibrated</div>
+            <div class="symmetry-status" id="force2Symmetry">Reaction Force Direction (-)</div>
+            <div class="time-display" id="force2Time">Sample: 0</div>
+        </div>
+        
+        <!-- Force Difference Display -->
+        <div class="current-value">
+            <div class="current-value-label">Force Difference |F₁ + F₂| (N)</div>
+            <div class="current-value-display force-diff-display" id="forceDiffValue">0.000</div>
+            <div class="zero-status" id="diffStatus">Newton's Third Law Verification</div>
+            <div class="symmetry-status" id="lawStatus">F₁ = -F₂</div>
+            <div class="time-display" id="diffTime">Sample: 0</div>
+        </div>
+    </div>
+
+    <!-- Data Summary for Scientific Reporting -->
+    <div class="data-summary">
+        <div class="summary-title">Newton's Third Law Verification Summary</div>
+        <div class="summary-grid">
+            <div class="summary-item">
+                <div class="summary-label">Total Samples</div>
+                <div class="summary-value" id="summaryTotalSamples">0</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Average Force Difference</div>
+                <div class="summary-value" id="summaryAvgDiff">0.0000 N</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Max Force Difference</div>
+                <div class="summary-value" id="summaryMaxDiff">0.0000 N</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Perfect Matches (&lt;0.001N)</div>
+                <div class="summary-value" id="summaryPerfect">0 (0%)</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Standard Deviation</div>
+                <div class="summary-value" id="summaryStdDev">0.0000 N</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Measurement Duration</div>
+                <div class="summary-value" id="summaryDuration">0.0 s</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="chart-container">
+        <div class="chart-export-controls">
+            <button class="chart-control-button" onclick="exportAllData()">Export All Data</button>
+            <button class="chart-control-button" onclick="exportInteractionForceData()">Export Interaction Force Data</button>
+            <button class="chart-control-button" onclick="calculateNewtonLaw()">Verify Newton's Third Law</button>
+            <button class="chart-control-button" onclick="toggleCharts()">Toggle Chart Theme</button>
+        </div>
+        
+        <div class="charts-row">
+            <!-- Combined Interaction Force Curve -->
+            <div class="chart-wrapper">
+                <div class="chart-title">
+                    <span>Newton's Third Law Interaction Force Curve</span>
+                    <span id="combinedChartInfo" style="font-size: 0.8rem; color: #6c757d;">Data Points: 0 | Difference: 0.0000N</span>
+                </div>
+                <div class="force-chart">
+                    <canvas id="combinedForceGraph"></canvas>
+                </div>
+            </div>
+            
+            <!-- Force Difference Curve -->
+            <div class="chart-wrapper">
+                <div class="chart-title">
+                    <span>Force Difference Curve |F₁ + F₂| (N)</span>
+                    <span id="diffChartInfo" style="font-size: 0.8rem; color: #6c757d;">Data Points: 0 | Average: 0.0000N</span>
+                </div>
+                <div class="diff-chart">
+                    <canvas id="forceDiffGraph"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <h3>Pico W Newton's Third Law Quantitative Experiment System</h3>
+        <p>Dual HX711 Sensor Synchronous Measurement | Interaction Forces Displayed Symmetrically in Same Graph | Newton's Third Law Verification | 20Hz Stable Sampling</p>
+    </footer>
+
+<script>
+    // Global Core Variables
+    let webSocket;
+    let combinedForceChart = null;  // Combined force curve chart
+    let forceDiffChart = null;      // Force difference chart
+    let isLightTheme = true;        // Track chart theme
+    
+    // Data cache
+    let force1DataCache = [];  // Sensor 1 data
+    let force2DataCache = [];  // Sensor 2 data
+    let forceDiffDataCache = []; // Force difference data
+    const MAX_CACHE = 800;
+    
+    // Interaction force aligned data
+    let alignedInteractionData = [];
+    const MAX_INTERACTION_CACHE = 1000;
+    
+    // Performance monitoring
+    let frameCount = 0;
+    let lastFpsTime = 0;
+    let currentFps = 0;
+    let lastDataTime = 0;
+    let sampleCount = 0;
+    let measurementStartTime = 0;
+    
+    // Newton's Third Law statistics
+    let newtonLawStats = {
+        totalSamples: 0,
+        perfectMatches: 0,      // Perfect match count
+        goodMatches: 0,         // Good match count
+        avgDifference: 0,       // Average difference
+        maxDifference: 0,       // Maximum difference
+        stdDev: 0,              // Standard deviation
+        symmetryError: 0,       // Symmetry error
+        lastUpdate: 0,
+        differences: []         // Store differences for std dev calculation
+    };
+
+    // Initialization
+    function init() {
+        initWebSocketConnection();
+        startPerformanceMonitor();
+        
+        // Initialize charts
+        setTimeout(() => {
+            initCharts();
+        }, 100);
+    }
+
+    // WebSocket connection
+    function initWebSocketConnection() {
+        updateStatus('connecting', 'Connecting...');
+        
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsHost = window.location.host;
+        const wsUrl = `${wsProtocol}//${wsHost}/sensor`;
+        
+        console.log(`Connection URL: ${wsUrl}`);
+        
+        webSocket = new WebSocket(wsUrl);
+
+        webSocket.addEventListener('open', () => {
+            updateStatus('connected', 'Connected');
+            console.log('✅ WebSocket connection successful');
+            
+            document.getElementById('sampleRate').textContent = '20 Hz';
+            resetNewtonLawStats();
+        });
+
+        webSocket.addEventListener('message', (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                const currentTime = performance.now();
+                
+                processDataItem(data, currentTime);
+                
+            } catch (error) {
+                console.error('❌ Data parsing error:', error);
+            }
+        });
+
+        webSocket.addEventListener('close', (event) => {
+            updateStatus('disconnected', 'Disconnected, reconnecting...');
+            console.log('🔌 WebSocket connection closed, reconnecting in 3 seconds...');
+            setTimeout(initWebSocketConnection, 3000);
+        });
+
+        webSocket.addEventListener('error', (error) => {
+            updateStatus('disconnected', 'Connection error');
+            console.error('❌ WebSocket error:', error);
+        });
+
+        window.addEventListener('beforeunload', () => {
+            if (webSocket?.readyState === WebSocket.OPEN) {
+                webSocket.close(1000, 'Page closed');
+            }
+        });
+    }
+
+    // Reset Newton's Third Law statistics
+    function resetNewtonLawStats() {
+        newtonLawStats = {
+            totalSamples: 0,
+            perfectMatches: 0,
+            goodMatches: 0,
+            avgDifference: 0,
+            maxDifference: 0,
+            stdDev: 0,
+            symmetryError: 0,
+            lastUpdate: 0,
+            differences: []
+        };
+        
+        // Reset summary display
+        updateSummaryDisplay();
+    }
+
+    // Process data item
+    function processDataItem(item, receiveTime) {
+        // Parse dual sensor data
+        const force1 = parseFloat(item.f1) || 0;
+        const force2 = parseFloat(item.f2) || 0;  // Note: this is already negative
+        const sampleRate = parseFloat(item.r) || 20;
+        const sampleNum = parseInt(item.n) || 0;
+        const forceDiff = parseFloat(item.fd) || 0;
+        const forceSymmetry = parseFloat(item.fs) || 0;
+        
+        // Start measurement timer on first data point
+        if (sampleNum === 1 && measurementStartTime === 0) {
+            measurementStartTime = receiveTime;
+        }
+        
+        // Update sample count
+        sampleCount = sampleNum;
+        
+        // Update time display
+        updateTimeDisplay(sampleNum);
+        
+        // Update sample rate display
+        updateSampleRateDisplay(sampleRate);
+        
+        // Update force difference display
+        updateForceDiffDisplay(forceDiff, forceSymmetry, sampleNum);
+        
+        // Update sensor 1 display
+        if (!isNaN(force1)) {
+            updateForceValue(force1, 'force1Value', 'force1Status', 'Action Force');
+            document.getElementById('force1Time').textContent = `Sample: ${sampleNum}`;
+        }
+        
+        // Update sensor 2 display
+        if (!isNaN(force2)) {
+            updateForceValue(force2, 'force2Value', 'force2Status', 'Reaction Force');
+            document.getElementById('force2Time').textContent = `Sample: ${sampleNum}`;
+        }
+        
+        // Calculate Newton's Third Law verification
+        if (!isNaN(force1) && !isNaN(force2)) {
+            calculateNewtonThirdLaw(force1, force2, sampleNum);
+        }
+        
+        // Store data to cache
+        updateDataCache(force1, force2, forceDiff, sampleNum, receiveTime);
+        
+        // Update all charts
+        updateAllCharts();
+        
+        // Update data points count
+        document.getElementById('dataPoints').textContent = sampleNum;
+        
+        // Update summary display
+        updateSummaryDisplay();
+        
+        // Display system message
+        if (item.msg) {
+            console.log("System message:", item.msg);
+        }
+    }
+
+    // Update data cache
+    function updateDataCache(force1, force2, forceDiff, sampleNum, timestamp) {
+        // Update force 1 cache
+        force1DataCache.push({
+            x: sampleNum,
+            y: force1,
+            timestamp: timestamp
+        });
+        
+        // Update force 2 cache
+        force2DataCache.push({
+            x: sampleNum,
+            y: force2,
+            timestamp: timestamp
+        });
+        
+        // Update force difference cache
+        forceDiffDataCache.push({
+            x: sampleNum,
+            y: forceDiff,
+            timestamp: timestamp
+        });
+        
+        // Limit cache size
+        if (force1DataCache.length > MAX_CACHE) {
+            force1DataCache.shift();
+        }
+        if (force2DataCache.length > MAX_CACHE) {
+            force2DataCache.shift();
+        }
+        if (forceDiffDataCache.length > MAX_CACHE) {
+            forceDiffDataCache.shift();
+        }
+        
+        // Store aligned data for interaction force analysis
+        if (!isNaN(force1) && !isNaN(force2)) {
+            alignedInteractionData.push({
+                timestamp: timestamp,
+                force1: force1,
+                force2: force2,
+                diff: Math.abs(force1 + force2),  // F1 + F2 should be close to 0
+                sampleNum: sampleNum
+            });
+            
+            if (alignedInteractionData.length > MAX_INTERACTION_CACHE) {
+                alignedInteractionData.shift();
+            }
+        }
+    }
+
+    // Calculate Newton's Third Law verification
+    function calculateNewtonThirdLaw(force1, force2, sampleNum) {
+        // Calculate force difference (absolute value)
+        const forceDifference = Math.abs(force1 + force2);  // F1 should be positive, F2 should be negative, sum should be close to 0
+        
+        // Update statistics
+        newtonLawStats.totalSamples++;
+        newtonLawStats.differences.push(forceDifference);
+        
+        // Classify matching degree
+        if (forceDifference < 0.001) {  // Perfect match: difference less than 0.001N
+            newtonLawStats.perfectMatches++;
+        } else if (forceDifference < 0.01) {  // Good match: difference less than 0.01N
+            newtonLawStats.goodMatches++;
+        }
+        
+        // Update average difference
+        const totalDiff = newtonLawStats.avgDifference * (newtonLawStats.totalSamples - 1) + forceDifference;
+        newtonLawStats.avgDifference = totalDiff / newtonLawStats.totalSamples;
+        
+        // Update maximum difference
+        if (forceDifference > newtonLawStats.maxDifference) {
+            newtonLawStats.maxDifference = forceDifference;
+        }
+        
+        // Calculate standard deviation
+        if (newtonLawStats.differences.length > 1) {
+            const mean = newtonLawStats.avgDifference;
+            const squaredDiffs = newtonLawStats.differences.map(d => Math.pow(d - mean, 2));
+            const avgSquaredDiff = squaredDiffs.reduce((sum, val) => sum + val, 0) / newtonLawStats.differences.length;
+            newtonLawStats.stdDev = Math.sqrt(avgSquaredDiff);
+        }
+        
+        // Calculate symmetry error
+        newtonLawStats.symmetryError = Math.abs(force1 - Math.abs(force2)) / 2;
+    }
+
+    // Update force difference display
+    function updateForceDiffDisplay(forceDiff, forceSymmetry, sampleNum) {
+        const forceDiffElem = document.getElementById('forceDiff');
+        const forceDiffValueElem = document.getElementById('forceDiffValue');
+        const diffStatusElem = document.getElementById('diffStatus');
+        const lawStatusElem = document.getElementById('lawStatus');
+        
+        forceDiffElem.textContent = forceDiff.toFixed(4) + ' N';
+        forceDiffValueElem.textContent = forceDiff.toFixed(4) + ' N';
+        document.getElementById('diffTime').textContent = `Sample: ${sampleNum}`;
+        
+        // Set color and status based on force difference
+        if (forceDiff < 0.001) {
+            forceDiffElem.style.color = '#28a745';
+            forceDiffValueElem.style.color = '#28a745';
+            diffStatusElem.style.color = '#28a745';
+            diffStatusElem.textContent = 'Perfectly matches Newton\'s Third Law';
+            lawStatusElem.className = 'symmetry-status symmetry-good';
+            lawStatusElem.textContent = 'F₁ = -F₂ (Perfect symmetry)';
+        } else if (forceDiff < 0.01) {
+            forceDiffElem.style.color = '#fd7e14';
+            forceDiffValueElem.style.color = '#fd7e14';
+            diffStatusElem.style.color = '#fd7e14';
+            diffStatusElem.textContent = 'Well matches Newton\'s Third Law';
+            lawStatusElem.className = 'symmetry-status symmetry-fair';
+            lawStatusElem.textContent = `F₁ ≈ -F₂ (Error: ${forceDiff.toFixed(4)}N)`;
+        } else if (forceDiff < 0.05) {
+            forceDiffElem.style.color = '#ffc107';
+            forceDiffValueElem.style.color = '#ffc107';
+            diffStatusElem.style.color = '#ffc107';
+            diffStatusElem.textContent = 'Basically matches Newton\'s Third Law';
+            lawStatusElem.className = 'symmetry-status symmetry-fair';
+            lawStatusElem.textContent = `F₁ ≈ -F₂ (Error: ${forceDiff.toFixed(4)}N)`;
+        } else {
+            forceDiffElem.style.color = '#dc3545';
+            forceDiffValueElem.style.color = '#dc3545';
+            diffStatusElem.style.color = '#dc3545';
+            diffStatusElem.textContent = 'Does not match Newton\'s Third Law';
+            lawStatusElem.className = 'symmetry-status symmetry-poor';
+            lawStatusElem.textContent = `F₁ ≠ -F₂ (Error: ${forceDiff.toFixed(4)}N)`;
+        }
+        
+        // Update symmetry status
+        updateSymmetryStatus(forceSymmetry);
+    }
+
+    // Update symmetry status
+    function updateSymmetryStatus(forceSymmetry) {
+        const symmetry1 = document.getElementById('force1Symmetry');
+        const symmetry2 = document.getElementById('force2Symmetry');
+        
+        const absSymmetry = Math.abs(forceSymmetry);
+        
+        if (absSymmetry < 0.005) {
+            symmetry1.className = 'symmetry-status symmetry-good';
+            symmetry2.className = 'symmetry-status symmetry-good';
+            symmetry1.textContent = 'Action Force Direction (+) - Perfect symmetry';
+            symmetry2.textContent = 'Reaction Force Direction (-) - Perfect symmetry';
+        } else if (absSymmetry < 0.02) {
+            symmetry1.className = 'symmetry-status symmetry-fair';
+            symmetry2.className = 'symmetry-status symmetry-fair';
+            symmetry1.textContent = 'Action Force Direction (+) - Good symmetry';
+            symmetry2.textContent = 'Reaction Force Direction (-) - Good symmetry';
+        } else {
+            symmetry1.className = 'symmetry-status symmetry-poor';
+            symmetry2.className = 'symmetry-status symmetry-poor';
+            symmetry1.textContent = `Action Force Direction (+) - Error: ${forceSymmetry.toFixed(4)}N`;
+            symmetry2.textContent = `Reaction Force Direction (-) - Error: ${forceSymmetry.toFixed(4)}N`;
+        }
+    }
+
+    // Update force value display
+    function updateForceValue(value, elementId, statusId, forceType) {
+        const valueElem = document.getElementById(elementId);
+        const statusElem = document.getElementById(statusId);
+        
+        // Format display
+        let formattedValue;
+        if (Math.abs(value) < 0.001) {
+            formattedValue = '0.000';
+        } else if (Math.abs(value) < 10) {
+            formattedValue = value.toFixed(3);
+        } else if (Math.abs(value) < 100) {
+            formattedValue = value.toFixed(2);
+        } else {
+            formattedValue = value.toFixed(1);
+        }
+        
+        valueElem.textContent = formattedValue + ' N';
+        
+        // Update status
+        if (Math.abs(value) < 0.005) {
+            statusElem.textContent = forceType + ' is zero';
+            statusElem.style.color = '#28a745';
+        } else if (value > 0) {
+            statusElem.textContent = forceType + ' is positive (' + formattedValue + ' N)';
+            statusElem.style.color = forceType === 'Action Force' ? '#0066cc' : '#dc3545';
+        } else {
+            statusElem.textContent = forceType + ' is negative (' + formattedValue + ' N)';
+            statusElem.style.color = forceType === 'Action Force' ? '#dc3545' : '#0066cc';
+        }
+    }
+
+    // Initialize charts
+    function initCharts() {
+        // Chart colors for light theme (SCI paper style)
+        const gridColor = isLightTheme ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)';
+        const textColor = isLightTheme ? '#212529' : '#f8f9fa';
+        const bgColor = isLightTheme ? 'white' : '#343a40';
+        
+        // Initialize combined force curve chart
+        const combinedCtx = document.getElementById('combinedForceGraph').getContext('2d');
+        combinedForceChart = new Chart(combinedCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: 'Action Force F₁ (N)',
+                        data: [],
+                        borderColor: '#0066cc',
+                        backgroundColor: 'rgba(0, 102, 204, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        pointHoverRadius: 4,
+                        fill: false,
+                        tension: 0.2,
+                        cubicInterpolationMode: 'monotone'
+                    },
+                    {
+                        label: 'Reaction Force F₂ (N)',
+                        data: [],
+                        borderColor: '#dc3545',
+                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        pointHoverRadius: 4,
+                        fill: false,
+                        tension: 0.2,
+                        cubicInterpolationMode: 'monotone'
+                    },
+                    {
+                        label: 'Zero Reference Line',
+                        data: [],
+                        borderColor: 'rgba(108, 117, 125, 0.5)',
+                        backgroundColor: 'transparent',
+                        borderWidth: 1,
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        fill: false,
+                        tension: 0
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 0
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                scales: {
+                    x: {
+                        type: 'linear',
+                        title: {
+                            display: true,
+                            text: 'Sample Point',
+                            color: textColor,
+                            font: {
+                                weight: 'bold'
+                            }
+                        },
+                        grid: {
+                            color: gridColor,
+                            drawBorder: true
+                        },
+                        ticks: {
+                            color: textColor,
+                            maxTicksLimit: 10
+                        },
+                        min: 0,
+                        max: 200,
+                        position: 'bottom'
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Force (N)',
+                            color: textColor,
+                            font: {
+                                weight: 'bold'
+                            }
+                        },
+                        grid: {
+                            color: gridColor,
+                            drawBorder: true
+                        },
+                        ticks: {
+                            color: textColor,
+                            callback: function(value) {
+                                return value.toFixed(3);
+                            }
+                        },
+                        min: -1.0,  // Symmetrical display, negative half-axis
+                        max: 1.0,   // Positive half-axis
+                        position: 'left'
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            color: textColor,
+                            font: {
+                                size: 12
+                            },
+                            usePointStyle: true
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: bgColor,
+                        titleColor: textColor,
+                        bodyColor: textColor,
+                        borderColor: '#0066cc',
+                        borderWidth: 1,
+                        displayColors: true,
+                        callbacks: {
+                            title: function(tooltipItems) {
+                                return `Sample: ${tooltipItems[0].label}`;
+                            },
+                            label: function(context) {
+                                const label = context.dataset.label || '';
+                                const value = context.parsed.y;
+                                
+                                // For action force, calculate difference with reaction force
+                                if (context.datasetIndex === 0) {
+                                    const force2Index = context.dataIndex;
+                                    const force2Value = force2DataCache[force2Index]?.y || 0;
+                                    const diff = Math.abs(value + force2Value);
+                                    return `${label}: ${value.toFixed(4)} N (Difference with F₂: ${diff.toFixed(4)} N)`;
+                                }
+                                // For reaction force, calculate difference with action force
+                                else if (context.datasetIndex === 1) {
+                                    const force1Index = context.dataIndex;
+                                    const force1Value = force1DataCache[force1Index]?.y || 0;
+                                    const diff = Math.abs(value + force1Value);
+                                    return `${label}: ${value.toFixed(4)} N (Difference with F₁: ${diff.toFixed(4)} N)`;
+                                }
+                                
+                                return `${label}: ${value.toFixed(4)} N`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Initialize force difference chart
+        const diffCtx = document.getElementById('forceDiffGraph').getContext('2d');
+        forceDiffChart = new Chart(diffCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Force Difference |F₁ + F₂| (N)',
+                    data: [],
+                    borderColor: '#ffc107',
+                    backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    fill: true,
+                    tension: 0.2,
+                    cubicInterpolationMode: 'monotone'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 0
+                },
+                scales: {
+                    x: {
+                        type: 'linear',
+                        title: {
+                            display: true,
+                            text: 'Sample Point',
+                            color: textColor,
+                            font: {
+                                weight: 'bold'
+                            }
+                        },
+                        grid: {
+                            color: gridColor
+                        },
+                        ticks: {
+                            color: textColor,
+                            maxTicksLimit: 10
+                        },
+                        min: 0,
+                        max: 200
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Force Difference (N)',
+                            color: textColor,
+                            font: {
+                                weight: 'bold'
+                            }
+                        },
+                        grid: {
+                            color: gridColor
+                        },
+                        ticks: {
+                            color: textColor,
+                            callback: function(value) {
+                                return value.toFixed(4);
+                            }
+                        },
+                        beginAtZero: true,
+                        min: 0,
+                        max: 0.1
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: textColor
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: bgColor,
+                        titleColor: textColor,
+                        bodyColor: textColor,
+                        borderColor: '#ffc107',
+                        borderWidth: 1,
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.parsed.y;
+                                let quality = '';
+                                if (value < 0.001) quality = 'Perfectly matches Newton\'s Third Law';
+                                else if (value < 0.01) quality = 'Well matches';
+                                else if (value < 0.05) quality = 'Basically matches';
+                                else quality = 'Does not match';
+                                
+                                return `Difference: ${value.toFixed(4)} N (${quality})`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        console.log('✅ Chart initialization completed (SCI paper style)');
+    }
+
+    // Update all charts
+    function updateAllCharts() {
+        updateCombinedForceChart();
+        updateForceDiffChart();
+    }
+
+    // Update combined force curve chart
+    function updateCombinedForceChart() {
+        if (!combinedForceChart || force1DataCache.length === 0 || force2DataCache.length === 0) return;
+        
+        // Prepare data
+        const labels = force1DataCache.map(item => item.x);
+        
+        // Update datasets
+        combinedForceChart.data.labels = labels;
+        combinedForceChart.data.datasets[0].data = force1DataCache.map(item => item.y);
+        combinedForceChart.data.datasets[1].data = force2DataCache.map(item => item.y);
+        
+        // Update zero reference line
+        const zeroLine = labels.map(() => 0);
+        combinedForceChart.data.datasets[2].data = zeroLine;
+        
+        // Adjust X-axis range to show latest data
+        if (labels.length > 0) {
+            const maxX = Math.max(...labels);
+            const windowSize = 200;
+            const minX = Math.max(0, maxX - windowSize);
+            
+            combinedForceChart.options.scales.x.min = minX;
+            combinedForceChart.options.scales.x.max = maxX;
+            
+            // Dynamically adjust Y-axis range
+            adjustCombinedYAxis();
+        }
+        
+        combinedForceChart.update('none');
+        
+        // Update chart info
+        updateChartInfo();
+    }
+
+    // Adjust combined chart Y-axis range
+    function adjustCombinedYAxis() {
+        if (force1DataCache.length === 0 || force2DataCache.length === 0) return;
+        
+        // Get currently visible data points
+        const xMin = combinedForceChart.options.scales.x.min;
+        const xMax = combinedForceChart.options.scales.x.max;
+        
+        const visibleForce1 = force1DataCache.filter(item => item.x >= xMin && item.x <= xMax);
+        const visibleForce2 = force2DataCache.filter(item => item.x >= xMin && item.x <= xMax);
+        
+        if (visibleForce1.length === 0 || visibleForce2.length === 0) return;
+        
+        // Calculate maximum force values
+        const maxForce1 = Math.max(...visibleForce1.map(item => Math.abs(item.y)));
+        const maxForce2 = Math.max(...visibleForce2.map(item => Math.abs(item.y)));
+        const maxForce = Math.max(maxForce1, maxForce2, 0.1);  // Minimum display 0.1N
+        
+        // Set symmetrical Y-axis range
+        const padding = maxForce * 0.2;
+        combinedForceChart.options.scales.y.min = -(maxForce + padding);
+        combinedForceChart.options.scales.y.max = maxForce + padding;
+    }
+
+    // Update force difference chart
+    function updateForceDiffChart() {
+        if (!forceDiffChart || forceDiffDataCache.length === 0) return;
+        
+        const labels = forceDiffDataCache.map(item => item.x);
+        forceDiffChart.data.labels = labels;
+        forceDiffChart.data.datasets[0].data = forceDiffDataCache.map(item => item.y);
+        
+        if (labels.length > 0) {
+            const maxX = Math.max(...labels);
+            const windowSize = 200;
+            const minX = Math.max(0, maxX - windowSize);
+            
+            forceDiffChart.options.scales.x.min = minX;
+            forceDiffChart.options.scales.x.max = maxX;
+            
+            // Calculate average force difference
+            const avgDiff = forceDiffDataCache.reduce((sum, item) => sum + item.y, 0) / forceDiffDataCache.length;
+            document.getElementById('diffChartInfo').textContent = 
+                `Data Points: ${forceDiffDataCache.length} | Average: ${avgDiff.toFixed(4)}N`;
+        }
+        
+        forceDiffChart.update('none');
+    }
+
+    // Update chart information
+    function updateChartInfo() {
+        const visiblePoints = Math.min(force1DataCache.length, force2DataCache.length);
+        
+        if (visiblePoints > 0) {
+            // Calculate force difference in current display range
+            const xMin = combinedForceChart.options.scales.x.min;
+            const xMax = combinedForceChart.options.scales.x.max;
+            
+            const visibleForce1 = force1DataCache.filter(item => item.x >= xMin && item.x <= xMax);
+            const visibleForce2 = force2DataCache.filter(item => item.x >= xMin && item.x <= xMax);
+            
+            if (visibleForce1.length > 0 && visibleForce2.length > 0) {
+                let totalDiff = 0;
+                for (let i = 0; i < Math.min(visibleForce1.length, visibleForce2.length); i++) {
+                    totalDiff += Math.abs(visibleForce1[i].y + visibleForce2[i].y);
+                }
+                const avgDiff = totalDiff / Math.min(visibleForce1.length, visibleForce2.length);
+                
+                document.getElementById('combinedChartInfo').textContent = 
+                    `Data Points: ${visiblePoints} | Average Difference: ${avgDiff.toFixed(4)}N`;
+            }
+        }
+    }
+
+    // Toggle chart theme between light and dark
+    function toggleCharts() {
+        isLightTheme = !isLightTheme;
+        
+        // Update chart colors
+        const gridColor = isLightTheme ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)';
+        const textColor = isLightTheme ? '#212529' : '#f8f9fa';
+        const bgColor = isLightTheme ? 'white' : '#343a40';
+        
+        // Update combined force chart
+        if (combinedForceChart) {
+            combinedForceChart.options.scales.x.grid.color = gridColor;
+            combinedForceChart.options.scales.y.grid.color = gridColor;
+            combinedForceChart.options.scales.x.ticks.color = textColor;
+            combinedForceChart.options.scales.y.ticks.color = textColor;
+            combinedForceChart.options.scales.x.title.color = textColor;
+            combinedForceChart.options.scales.y.title.color = textColor;
+            combinedForceChart.options.plugins.legend.labels.color = textColor;
+            combinedForceChart.options.plugins.tooltip.backgroundColor = bgColor;
+            combinedForceChart.options.plugins.tooltip.titleColor = textColor;
+            combinedForceChart.options.plugins.tooltip.bodyColor = textColor;
+            combinedForceChart.update();
+        }
+        
+        // Update force difference chart
+        if (forceDiffChart) {
+            forceDiffChart.options.scales.x.grid.color = gridColor;
+            forceDiffChart.options.scales.y.grid.color = gridColor;
+            forceDiffChart.options.scales.x.ticks.color = textColor;
+            forceDiffChart.options.scales.y.ticks.color = textColor;
+            forceDiffChart.options.scales.x.title.color = textColor;
+            forceDiffChart.options.scales.y.title.color = textColor;
+            forceDiffChart.options.plugins.legend.labels.color = textColor;
+            forceDiffChart.options.plugins.tooltip.backgroundColor = bgColor;
+            forceDiffChart.options.plugins.tooltip.titleColor = textColor;
+            forceDiffChart.options.plugins.tooltip.bodyColor = textColor;
+            forceDiffChart.update();
+        }
+        
+        console.log(`✅ Switched to ${isLightTheme ? 'light' : 'dark'} chart theme`);
+    }
+
+    // Update summary display
+    function updateSummaryDisplay() {
+        document.getElementById('summaryTotalSamples').textContent = newtonLawStats.totalSamples;
+        document.getElementById('summaryAvgDiff').textContent = newtonLawStats.avgDifference.toFixed(4) + ' N';
+        document.getElementById('summaryMaxDiff').textContent = newtonLawStats.maxDifference.toFixed(4) + ' N';
+        document.getElementById('summaryStdDev').textContent = newtonLawStats.stdDev.toFixed(4) + ' N';
+        
+        // Calculate perfect match percentage
+        const perfectPercent = newtonLawStats.totalSamples > 0 ? 
+            (newtonLawStats.perfectMatches / newtonLawStats.totalSamples * 100).toFixed(1) : 0;
+        document.getElementById('summaryPerfect').textContent = 
+            `${newtonLawStats.perfectMatches} (${perfectPercent}%)`;
+        
+        // Calculate measurement duration
+        if (measurementStartTime > 0) {
+            const duration = (performance.now() - measurementStartTime) / 1000;
+            document.getElementById('summaryDuration').textContent = duration.toFixed(1) + ' s';
+        }
+    }
+
+    // Export interaction force data
+    function exportInteractionForceData() {
+        if (alignedInteractionData.length === 0) {
+            alert('No interaction force data to export');
+            return;
+        }
+        
+        let csvContent = "Sample Point,Timestamp(ms),Action Force F1(N),Reaction Force F2(N),Force Difference|F1+F2|(N),Symmetry Error(N),Newton's Third Law Verification\n";
+        
+        alignedInteractionData.forEach(item => {
+            const diff = Math.abs(item.force1 + item.force2);
+            const symmetry = Math.abs(item.force1 - Math.abs(item.force2)) / 2;
+            let newtonLaw = "Does not match";
+            
+            if (diff < 0.001) {
+                newtonLaw = "Perfectly matches";
+            } else if (diff < 0.01) {
+                newtonLaw = "Well matches";
+            } else if (diff < 0.05) {
+                newtonLaw = "Basically matches";
+            }
+            
+            csvContent += `${item.sampleNum},${item.timestamp.toFixed(2)},${item.force1.toFixed(4)},${item.force2.toFixed(4)},${diff.toFixed(4)},${symmetry.toFixed(4)},${newtonLaw}\n`;
+        });
+        
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        a.download = `newton_third_law_data_${timestamp}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        console.log(`📊 Interaction force data exported, total ${alignedInteractionData.length} data points`);
+    }
+
+    // Calculate Newton's Third Law verification results
+    function calculateNewtonLaw() {
+        if (alignedInteractionData.length === 0) {
+            alert('No data to calculate');
+            return;
+        }
+        
+        // Calculate statistics
+        let totalDiff = 0;
+        let maxDiff = 0;
+        let perfectCount = 0;
+        let goodCount = 0;
+        let fairCount = 0;
+        let poorCount = 0;
+        
+        alignedInteractionData.forEach(item => {
+            const diff = Math.abs(item.force1 + item.force2);
+            totalDiff += diff;
+            
+            if (diff > maxDiff) maxDiff = diff;
+            
+            if (diff < 0.001) {
+                perfectCount++;
+            } else if (diff < 0.01) {
+                goodCount++;
+            } else if (diff < 0.05) {
+                fairCount++;
+            } else {
+                poorCount++;
+            }
+        });
+        
+        const avgDiff = totalDiff / alignedInteractionData.length;
+        const perfectPercent = (perfectCount / alignedInteractionData.length * 100).toFixed(1);
+        const goodPercent = (goodCount / alignedInteractionData.length * 100).toFixed(1);
+        const fairPercent = (fairCount / alignedInteractionData.length * 100).toFixed(1);
+        const poorPercent = (poorCount / alignedInteractionData.length * 100).toFixed(1);
+        
+        // Calculate standard deviation
+        const squaredDiffs = alignedInteractionData.map(item => {
+            const diff = Math.abs(item.force1 + item.force2);
+            return Math.pow(diff - avgDiff, 2);
+        });
+        const avgSquaredDiff = squaredDiffs.reduce((sum, val) => sum + val, 0) / alignedInteractionData.length;
+        const stdDev = Math.sqrt(avgSquaredDiff);
+        
+        // Display results
+        const result = `
+Newton's Third Law Verification Results:
+===========================================
+Total Data Points: ${alignedInteractionData.length}
+Average Force Difference: ${avgDiff.toFixed(4)} N
+Maximum Force Difference: ${maxDiff.toFixed(4)} N
+Standard Deviation: ${stdDev.toFixed(4)} N
+
+Matching Degree Statistics:
+  Perfect match (difference < 0.001N): ${perfectCount} points (${perfectPercent}%)
+  Good match (difference < 0.01N): ${goodCount} points (${goodPercent}%)
+  Fair match (difference < 0.05N): ${fairCount} points (${fairPercent}%)
+  Poor match (difference ≥ 0.05N): ${poorCount} points (${poorPercent}%)
+
+Newton's Third Law Verification Conclusion:
+  ${avgDiff < 0.01 ? '✅ Experimental data well verifies Newton\'s Third Law' : 
+    avgDiff < 0.05 ? '⚠️ Experimental data basically verifies Newton\'s Third Law, but with noticeable errors' : 
+    '❌ Experimental data does not sufficiently verify Newton\'s Third Law, please check experimental setup'}
+`;
+        
+        alert(result);
+        console.log(result);
+        
+        // Update summary display with these results
+        newtonLawStats.avgDifference = avgDiff;
+        newtonLawStats.maxDifference = maxDiff;
+        newtonLawStats.stdDev = stdDev;
+        newtonLawStats.perfectMatches = perfectCount;
+        updateSummaryDisplay();
+    }
+
+    // Export all data
+    function exportAllData() {
+        if (force1DataCache.length === 0 && force2DataCache.length === 0) {
+            alert('No data to export');
+            return;
+        }
+        
+        let csvContent = "Sample Point,Timestamp(ms),Action Force F1(N),Reaction Force F2(N),Force Difference|F1+F2|(N),Newton's Third Law Verification\n";
+        
+        // Find maximum sample point
+        const maxSamples = Math.max(
+            force1DataCache.length > 0 ? force1DataCache[force1DataCache.length-1].x : 0,
+            force2DataCache.length > 0 ? force2DataCache[force2DataCache.length-1].x : 0
+        );
+        
+        // Create data aligned by sample point
+        for (let i = 0; i <= maxSamples; i++) {
+            const force1Data = force1DataCache.find(item => item.x === i);
+            const force2Data = force2DataCache.find(item => item.x === i);
+            const diffData = forceDiffDataCache.find(item => item.x === i);
+            
+            const force1Value = force1Data ? force1Data.y : 0;
+            const force2Value = force2Data ? force2Data.y : 0;
+            const diffValue = diffData ? diffData.y : 0;
+            const timestamp = force1Data ? force1Data.timestamp : (force2Data ? force2Data.timestamp : 0);
+            
+            // Calculate Newton's Third Law verification
+            const diff = Math.abs(force1Value + force2Value);
+            let newtonLaw = "Does not match";
+            if (diff < 0.001) newtonLaw = "Perfectly matches";
+            else if (diff < 0.01) newtonLaw = "Well matches";
+            else if (diff < 0.05) newtonLaw = "Basically matches";
+            
+            csvContent += `${i},${timestamp.toFixed(2)},${force1Value.toFixed(4)},${force2Value.toFixed(4)},${diffValue.toFixed(4)},${newtonLaw}\n`;
+        }
+        
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        a.download = `all_sensor_data_${timestamp}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        console.log(`📊 All data exported, total ${maxSamples+1} sample points`);
+    }
+
+    // Other helper functions
+    function updateStatus(status, text) {
+        const statusElem = document.getElementById('wsStatus');
+        statusElem.className = `status-item ws-status ${status}`;
+        document.getElementById('wsStatusText').textContent = text;
+    }
+
+    function updateTimeDisplay(sampleNum) {
+        const seconds = sampleNum / 20;
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        
+        const displayTime = `${hours.toString().padStart(2, '0')}:${(minutes % 60).toString().padStart(2, '0')}:${(seconds % 60).toFixed(1).padStart(4, '0')}`;
+        
+        const header = document.getElementById('mainTitle');
+        if (header) {
+            header.innerHTML = `Pico W Newton's Third Law Experiment Platform<br><span style="font-size: 0.7em; color: #495057;">Measurement Time: ${displayTime} | Sample: ${sampleNum} | Sample Rate: 20Hz</span>`;
+        }
+    }
+
+    function updateSampleRateDisplay(sampleRate) {
+        document.getElementById('sampleRate').textContent = `${Math.round(sampleRate)} Hz`;
+    }
+
+    function calibrateAndZero() {
+        if (webSocket?.readyState === WebSocket.OPEN) {
+            console.log('🔧 Starting dual sensor zeroing process...');
+            
+            document.getElementById('force1Status').style.color = '#0066cc';
+            document.getElementById('force1Status').textContent = 'Sensor 1 zeroing...';
+            document.getElementById('force2Status').style.color = '#0066cc';
+            document.getElementById('force2Status').textContent = 'Sensor 2 zeroing...';
+            
+            webSocket.send('Flag1');
+            console.log('📤 Sent command: Flag1 (dual sensor zero)');
+            
+            setTimeout(() => {
+                console.log('✅ Calibration and zeroing process completed');
+                
+                resetNewtonLawStats();
+                measurementStartTime = 0; // Reset measurement timer
+            }, 1000);
+        } else {
+            alert('⚠️ WebSocket not connected! Please ensure device is powered on and reconnect.');
+            updateStatus('disconnected', 'Not connected');
+        }
+    }
+
+    function sendCommand(command) {
+        if (webSocket?.readyState === WebSocket.OPEN) {
+            webSocket.send(command);
+            console.log(`📤 Sent command: ${command}`);
+            
+            if (command === 'Flag2') {
+                setTimeout(() => {
+                    document.getElementById('force1Status').style.color = '#28a745';
+                    document.getElementById('force1Status').textContent = 'Measuring...';
+                    document.getElementById('force2Status').style.color = '#28a745';
+                    document.getElementById('force2Status').textContent = 'Measuring...';
+                    
+                    resetNewtonLawStats();
+                    measurementStartTime = performance.now(); // Start measurement timer
+                }, 100);
+            } else if (command === 'Flag3') {
+                measurementStartTime = 0; // Reset measurement timer
+            }
+        } else {
+            alert('⚠️ WebSocket not connected! Please ensure device is powered on and reconnect.');
+            updateStatus('disconnected', 'Not connected');
+        }
+    }
+
+    function startPerformanceMonitor() {
+        function updateFps() {
+            frameCount++;
+            const now = performance.now();
+            
+            if (now - lastFpsTime >= 1000) {
+                currentFps = Math.round((frameCount * 1000) / (now - lastFpsTime));
+                frameCount = 0;
+                lastFpsTime = now;
+                
+                if (false) {
+                    console.log(`🎯 Rendering FPS: ${currentFps}, Sensor 1 data: ${force1DataCache.length}, Sensor 2 data: ${force2DataCache.length}`);
+                }
+            }
+            requestAnimationFrame(updateFps);
+        }
+        updateFps();
+    }
+
+    // Start application
+    window.addEventListener('DOMContentLoaded', init);
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        switch(e.key) {
+            case '1':
+                calibrateAndZero();
+                break;
+            case '2':
+                sendCommand('Flag2');
+                break;
+            case '3':
+                sendCommand('Flag3');
+                break;
+            case 'n':
+            case 'N':
+                if (e.ctrlKey) {
+                    calculateNewtonLaw();
+                }
+                break;
+            case 'e':
+            case 'E':
+                if (e.ctrlKey) {
+                    exportAllData();
+                }
+                break;
+            case 't':
+            case 'T':
+                if (e.ctrlKey) {
+                    toggleCharts();
+                }
+                break;
+        }
+    });
+    
+    console.log('🎮 Keyboard shortcuts:');
+    console.log('  1 - Dual sensor zero');
+    console.log('  2 - Start measurement (Flag2)');
+    console.log('  3 - Stop measurement (Flag3)');
+    console.log('  Ctrl+N - Calculate Newton\'s Third Law verification');
+    console.log('  Ctrl+E - Export all data');
+    console.log('  Ctrl+T - Toggle chart theme');
+</script>
+</body>
+</html>
