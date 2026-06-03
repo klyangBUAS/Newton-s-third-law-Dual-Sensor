@@ -1,0 +1,10 @@
+Circuit Connections
+The system consisted of a Raspberry Pi Pico W microcontroller, two HX711 analog to digital converters, two load cells, a TP4056 battery charging module, a 3.7 V lithium ion battery (1000 mAh), and a power switch.
+•	Power supply: The battery was connected to the TP4056 module (B+ / B–) for charging. The output of the battery (via a protection board) was routed through a power switch to the VSYS pin of the Pico W and to the VCC pins of both HX711 modules. All ground (GND) pins were connected together.
+•	HX711 to Pico W connections:
+o	First HX711: DATA → GPIO17, CLK → GPIO16.
+o	Second HX711: DATA → GPIO19, CLK → GPIO18.
+o	Both HX711 modules were powered by the same VSYS supply (≈3.7–4.2 V) and shared the common ground.
+•	Load cells: Each HX711 was connected to a load cell using the standard four wire configuration (E+, E–, A+, A–). No additional amplification was used.
+•	Communication: The Pico W operated as a Wi Fi access point (SSID: PicoW ForceSensor). A WebSocket server running on the Pico W streamed force data from both sensors to a connected client (e.g., a laptop or tablet).
+All connections were soldered on a prototype board, and the system was powered exclusively by the 3.7 V lithium battery during measurements.
